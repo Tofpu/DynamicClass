@@ -118,7 +118,8 @@ public final class DynamicClass {
 
             boolean pause = false;
             for (final Class<?> parameter : constructor.getParameterTypes()) {
-                final Object object = OBJECT_MAP.get(parameter);
+                final Object object = getDeepObject(parameter);
+
                 if (object == null) {
                     pause = true;
                     break;
@@ -144,6 +145,34 @@ public final class DynamicClass {
             }
         }
         return clazzInstance;
+    }
+
+    private static Object getDeepObject(final Class<?> clazz) {
+        Object object = null;
+        for (final Map.Entry<Class<?>, Object> entry : OBJECT_MAP.entrySet()) {
+            final Class<?> entryClass = entry.getKey();
+
+            // if the entryClass is not assignable to the given class
+            if (!entryClass.isAssignableFrom(clazz)) {
+                // attempt to retrieve the super class from entryClass
+                Class<?> entrySuperClass = entryClass.getSuperclass();
+
+                // while entrySuperClass is not null & entrySuperClass is not assignable to the
+                // given class
+                // NOTE: we're basically going through the class superclass, and are
+                // trying to find a class that is assignable to our given class
+                while (entrySuperClass != null && !entrySuperClass.isAssignableFrom(clazz)) {
+                    // reassign the superclass's superclass to entrySuperClass variable
+                    entrySuperClass = entrySuperClass.getSuperclass();
+                }
+                // if it's still not assignable, continue throughout the object map
+                if (!clazz.isAssignableFrom(entrySuperClass)) {
+                    continue;
+                }
+            }
+            object = entry.getValue();
+        }
+        return object;
     }
 
     /**
