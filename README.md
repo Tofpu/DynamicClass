@@ -39,7 +39,6 @@ public final class Main {
         // that are annotated with @AutoRegister
         // shall be invoked
         DynamicClass.scan(PACKAGE_NAME);
-        DynamicClass.scan(PACKAGE_NAME);
 
         // retrieves an instance of our AppleRegistry from DynamicClass
         final AppleRegistry appleRegistry = DynamicClass.getInstance(AppleRegistry.class);
