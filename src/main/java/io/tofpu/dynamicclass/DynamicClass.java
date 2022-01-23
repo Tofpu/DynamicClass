@@ -154,25 +154,41 @@ public final class DynamicClass {
 
             // if the entryClass is not assignable to the given class
             if (!entryClass.isAssignableFrom(clazz)) {
-                // attempt to retrieve the super class from entryClass
-                Class<?> entrySuperClass = entryClass.getSuperclass();
-
-                // while entrySuperClass is not null & entrySuperClass is not assignable to the
-                // given class
-                // NOTE: we're basically going through the class superclass, and are
-                // trying to find a class that is assignable to our given class
-                while (entrySuperClass != null && !entrySuperClass.isAssignableFrom(clazz)) {
-                    // reassign the superclass's superclass to entrySuperClass variable
-                    entrySuperClass = entrySuperClass.getSuperclass();
-                }
-                // if it's still not assignable, continue throughout the object map
-                if (!clazz.isAssignableFrom(entrySuperClass)) {
+                // then attempt to recurse through the class
+                if (!recursionClassScan(clazz, entryClass)) {
                     continue;
                 }
             }
             object = entry.getValue();
         }
         return object;
+    }
+
+    private static boolean recursionClassScan(final Class<?> target, final Class<?> clazz) {
+        // reassign the entrySuperClass's superclass to entrySuperClass variable
+        final Class<?> superClass = clazz.getSuperclass();
+        Class<?> interfaceClass = null;
+
+        if (superClass != null) {
+            for (final Class<?> interfaceClazz : superClass.getInterfaces()) {
+                if (!target.isAssignableFrom(interfaceClazz)) {
+                    continue;
+                }
+                interfaceClass = interfaceClazz;
+            }
+        }
+
+        final boolean superAssignable = superClass != null && target.isAssignableFrom(superClass);
+        final boolean interfaceAssignable = interfaceClass != null && target.isAssignableFrom(interfaceClass);
+
+        // if the super class is not null & it's not assignable, and interface is not
+        // assignable as well
+        if ((superClass != null && !superAssignable) && !interfaceAssignable) {
+            // then, continue the recursion scan!
+            recursionClassScan(target, superClass);
+        }
+
+        return superAssignable || interfaceAssignable;
     }
 
     /**
