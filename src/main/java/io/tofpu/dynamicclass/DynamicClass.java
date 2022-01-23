@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class DynamicClass {
-    public static final Map<Class<?>, Object> OBJECT_MAP = new HashMap<>();
+    private static final Map<Class<?>, Object> OBJECT_MAP = new HashMap<>();
 
     /**
      * This method will scan through the given package for classes that are
