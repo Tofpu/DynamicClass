@@ -172,7 +172,6 @@ public final class DynamicClass {
         Class<?> interfaceClass = null;
 
         if (superClass != null && !superClass.isInstance(Object.class)) {
-            System.out.println(superClass);
             OBJECT_MAP.put(superClass, object);
 
             for (final Class<?> interfaceClazz : superClass.getInterfaces()) {
