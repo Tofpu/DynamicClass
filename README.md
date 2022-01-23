@@ -8,7 +8,7 @@ DynamicClass supports:
 - [x] Constructor(s) 
 - [x] Superclass(es)
 - [x] Interface(s)
-- [-] Interface(s) with Superclass(es) 
+- [ ] Interface(s) with Superclass(es) 
 
 # How to use
 It's extremely simple! All you need to do is, annotate the class that you'd want to be automatically created with @AutoRegister, 
