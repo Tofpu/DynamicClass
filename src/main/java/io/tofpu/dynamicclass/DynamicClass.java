@@ -1,5 +1,7 @@
 package io.tofpu.dynamicclass;
 
+import com.google.common.collect.Lists;
+import com.google.common.reflect.ClassPath;
 import io.tofpu.dynamicclass.exception.InvalidConstructorException;
 import io.tofpu.dynamicclass.meta.AutoRegister;
 import io.tofpu.dynamicclass.util.ClassFinder;
@@ -7,10 +9,8 @@ import io.tofpu.dynamicclass.util.ClassFinder;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public final class DynamicClass {
     private static final Map<Class<?>, Object> OBJECT_MAP = new HashMap<>();
@@ -18,17 +18,37 @@ public final class DynamicClass {
     /**
      * This method will scan through the given package for classes that are
      * annotated with {@link AutoRegister}. then, it'll attempt to create
-     * a new instance of said class.
+     * a new instance of said class with {@link #scan(Collection)} method.
      *
      * @param packageName your package directory
      *
      * @throws IllegalStateException when one of the classes has a non-suitable
      * constructor
+     * @see #alternativeScan(ClassLoader, String)
+     * @see #scan(Collection)
      */
     public static void scan(final String packageName) {
         try {
+            scan(Lists.newArrayList(ClassFinder.getClasses(packageName)));
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * This method can be used when both of the scan method doesn't work properly.
+     * This method scan through the given classes, which then attempts to create
+     * a new instance of said class.
+     *
+     * @param classes classes that is to be scanned
+     *
+     * @throws IllegalStateException when one of the classes has a non-suitable
+     * constructor
+     */
+    public static void scan(final Collection<Class<?>> classes) {
+        try {
             final List<Class<?>> decoupledClasses = new ArrayList<>();
-            for (final Class<?> clazz : ClassFinder.getClasses(packageName)) {
+            for (final Class<?> clazz : classes) {
                 if (!clazz.isAnnotationPresent(AutoRegister.class) || OBJECT_MAP.containsKey(clazz)) {
                     continue;
                 }
@@ -45,9 +65,36 @@ public final class DynamicClass {
             for (final Class<?> clazz : decoupledClasses) {
                 addParameter(newInstance(clazz));
             }
-        } catch (ClassNotFoundException | IOException | InvalidConstructorException e) {
+        } catch (IOException | InvalidConstructorException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /**
+     * This method is to be used when the primary {@link #scan(String)} doesn't work
+     * properly. this alternated method basically scans through the given package for
+     * classes with {@link ClassPath} (which are marked beta, as of Guice 17.0).
+     * <p>
+     * Once that's done, it'll attempt to create new instance of said class with
+     * {@link #scan(Collection)} method.
+     *
+     * @param classLoader your classloader, see {@link Class#getClassLoader()}
+     * @param packageName your package directory
+     *
+     * @throws IllegalStateException when one of the classes has a non-suitable
+     * constructor
+     * @see #scan(String)
+     * @see #scan(Collection)
+     */
+    public static void alternativeScan(final ClassLoader classLoader, final String packageName) {
+        final List<Class<?>> classes = ClassPath.from(classLoader)
+                .getTopLevelClasses()
+                .stream()
+                .filter(classInfo -> classInfo.getPackageName().contains(packageName))
+                .map(ClassPath.ClassInfo::load)
+                .collect(Collectors.toList());
+
+        scan(classes);
     }
 
     private static void addParameter(final Object object) {
