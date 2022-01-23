@@ -1,6 +1,6 @@
 <div align="center">
   <h1>DynamicClass</h1>
-  <p>DynamicClass is a simple, lightweight & easy to use utility which helps you removing bloat from your code.</p>
+  <p>DynamicClass is a simple, lightweight & easy to use utility which helps you remove bloat from your code.</p>
 </div>
 
 # How to use
