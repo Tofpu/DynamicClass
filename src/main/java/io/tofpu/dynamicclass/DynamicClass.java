@@ -65,7 +65,7 @@ public final class DynamicClass {
             for (final Class<?> clazz : decoupledClasses) {
                 addParameter(newInstance(clazz));
             }
-        } catch (IOException | InvalidConstructorException e) {
+        } catch (InvalidConstructorException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -83,10 +83,12 @@ public final class DynamicClass {
      *
      * @throws IllegalStateException when one of the classes has a non-suitable
      * constructor
+     * @throws IOException if the attempt to read class path resources (jar files or
+     * directories) failed.
      * @see #scan(String)
      * @see #scan(Collection)
      */
-    public static void alternativeScan(final ClassLoader classLoader, final String packageName) {
+    public static void alternativeScan(final ClassLoader classLoader, final String packageName) throws IOException {
         final List<Class<?>> classes = ClassPath.from(classLoader)
                 .getTopLevelClasses()
                 .stream()
