@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class DynamicClass {
-    private static final Map<Class<?>, Object> OBJECT_MAP = new HashMap<>();
+    public static final Map<Class<?>, Object> OBJECT_MAP = new HashMap<>();
 
     /**
      * This method will scan through the given package for classes that are
@@ -149,13 +149,15 @@ public final class DynamicClass {
 
     private static Object getDeepObject(final Class<?> clazz) {
         Object object = null;
-        for (final Map.Entry<Class<?>, Object> entry : OBJECT_MAP.entrySet()) {
+        final Map<Class<?>, Object> OBJECT_MAP_COPY = new HashMap<>(OBJECT_MAP);
+        for (final Map.Entry<Class<?>, Object> entry : OBJECT_MAP_COPY.entrySet()) {
             final Class<?> entryClass = entry.getKey();
+            final Object entryObject = entry.getValue();
 
             // if the entryClass is not assignable to the given class
             if (!entryClass.isAssignableFrom(clazz)) {
                 // then attempt to recurse through the class
-                if (!recursionClassScan(clazz, entryClass)) {
+                if (!recursionClassScan(clazz, entryObject, entryClass)) {
                     continue;
                 }
             }
@@ -164,17 +166,21 @@ public final class DynamicClass {
         return object;
     }
 
-    private static boolean recursionClassScan(final Class<?> target, final Class<?> clazz) {
+    private static boolean recursionClassScan(final Class<?> target, final Object object, final Class<?> clazz) {
         // reassign the entrySuperClass's superclass to entrySuperClass variable
         final Class<?> superClass = clazz.getSuperclass();
         Class<?> interfaceClass = null;
 
-        if (superClass != null) {
+        if (superClass != null && !superClass.isInstance(Object.class)) {
+            System.out.println(superClass);
+            OBJECT_MAP.put(superClass, object);
+
             for (final Class<?> interfaceClazz : superClass.getInterfaces()) {
                 if (!target.isAssignableFrom(interfaceClazz)) {
                     continue;
                 }
                 interfaceClass = interfaceClazz;
+                OBJECT_MAP.put(interfaceClass, object);
             }
         }
 
@@ -185,7 +191,7 @@ public final class DynamicClass {
         // assignable as well
         if ((superClass != null && !superAssignable) && !interfaceAssignable) {
             // then, continue the recursion scan!
-            recursionClassScan(target, superClass);
+            recursionClassScan(target, object, superClass);
         }
 
         return superAssignable || interfaceAssignable;
