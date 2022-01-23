@@ -24,7 +24,7 @@ and in your application, run DynamicClass#scan method. that's it!
         <dependency>
             <groupId>com.github.Tofpu</groupId>
             <artifactId>DynamicClass</artifactId>
-            <version>ed459843c9</version>
+            <version>c22037ede5</version>
         </dependency>
 ```
 
