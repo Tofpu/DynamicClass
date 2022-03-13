@@ -89,12 +89,21 @@ public final class DynamicClass {
      * @see #scan(Collection)
      */
     public static void alternativeScan(final ClassLoader classLoader, final String packageName) throws IOException {
-        final List<Class<?>> classes = ClassPath.from(classLoader)
-                .getTopLevelClasses()
-                .stream()
-                .filter(classInfo -> classInfo.getPackageName().contains(packageName))
-                .map(ClassPath.ClassInfo::load)
-                .collect(Collectors.toList());
+        final List<Class<?>> classes = new ArrayList<>();
+        for (final ClassPath.ClassInfo clazz : ClassPath.from(classLoader)
+                .getTopLevelClasses()) {
+            if (!clazz.getPackageName()
+                    .contains(packageName)) {
+                continue;
+            }
+
+            try {
+                classes.add(clazz.load());
+                ClassNo
+            } catch (final IllegalStateException | NoClassDefFoundError ignored) {
+                // ignore the exception
+            }
+        }
 
         scan(classes);
     }
