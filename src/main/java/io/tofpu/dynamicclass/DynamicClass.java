@@ -99,7 +99,6 @@ public final class DynamicClass {
 
             try {
                 classes.add(clazz.load());
-                ClassNo
             } catch (final IllegalStateException | NoClassDefFoundError ignored) {
                 // ignore the exception
             }
