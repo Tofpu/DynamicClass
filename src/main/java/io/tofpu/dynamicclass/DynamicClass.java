@@ -10,15 +10,23 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public final class DynamicClass {
     private static final Map<Class<?>, Object> OBJECT_MAP = new HashMap<>();
 
     /**
-     * This method will scan through the given package for classes that are
-     * annotated with {@link AutoRegister}. then, it'll attempt to create
-     * a new instance of said class with {@link #scan(Collection)} method.
+     * This method will attempt to create a new instance of classes that are
+     * annotated with {@link AutoRegister}.
+     * <p>
+     * If the class has a constructor, and the constructor's parameters are
+     * registered with {@link #addParameter(Object)} method, or the parameter
+     * class is annotated with {@link AutoRegister} annotation, then the parameter
+     * will be created and passed to the constructor.
+     * <p>
+     * If the class has no constructor, then the instance will be created.
+     * <p>
+     * If the class has a constructor, but the constructor's parameters two
+     * outlined steps failed, then an exception will be thrown.
      *
      * @param packageName your package directory
      *
@@ -31,16 +39,17 @@ public final class DynamicClass {
         try {
             scan(Lists.newArrayList(ClassFinder.getClasses(packageName)));
         } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         }
     }
 
     /**
-     * This method can be used when both of the scan method doesn't work properly.
-     * This method scan through the given classes, which then attempts to create
-     * a new instance of said class.
+     * This method is preferred to use when you want to scan through a list of
+     * specific classes by your own preferred way.
+     * It does not use {@link ClassPath}(which are marked beta,
+     * and are not guaranteed to work).
      *
-     * @param classes classes that is to be scanned
+     * @param classes Classes that you want to be scanned
      *
      * @throws IllegalStateException when one of the classes has a non-suitable
      * constructor
@@ -49,13 +58,19 @@ public final class DynamicClass {
         try {
             final List<Class<?>> decoupledClasses = new ArrayList<>();
             for (final Class<?> clazz : classes) {
-                if (!clazz.isAnnotationPresent(AutoRegister.class) || OBJECT_MAP.containsKey(clazz)) {
+                if (!clazz.isAnnotationPresent(AutoRegister.class) ||
+                    OBJECT_MAP.containsKey(clazz)) {
                     continue;
                 }
 
                 try {
-                    addParameter(newInstance(clazz));
-                } catch (final IllegalStateException ex) {
+                    final Object object = newInstance(clazz);
+                    if (object == null) {
+                        decoupledClasses.add(clazz);
+                        continue;
+                    }
+                    addParameter(object);
+                } catch (final IllegalStateException | InvalidConstructorException ex) {
                     // there's a possibility that there's a decoupled class involved here
                     decoupledClasses.add(clazz);
                 }
@@ -71,15 +86,12 @@ public final class DynamicClass {
     }
 
     /**
-     * This method is to be used when the primary {@link #scan(String)} doesn't work
-     * properly. this alternated method basically scans through the given package for
-     * classes with {@link ClassPath} (which are marked beta, as of Guice 17.0).
-     * <p>
-     * Once that's done, it'll attempt to create new instance of said class with
-     * {@link #scan(Collection)} method.
+     * This method is to be used when {@link #scan(String)} method is not working.
+     * It will scan through all the classes in the classpath, with
+     * the given classloader, and pass the classes to {@link #scan(Collection)} method.
      *
-     * @param classLoader your classloader, see {@link Class#getClassLoader()}
-     * @param packageName your package directory
+     * @param classLoader Your classloader, see {@link Class#getClassLoader()}
+     * @param packageName Your package directory
      *
      * @throws IllegalStateException when one of the classes has a non-suitable
      * constructor
@@ -108,6 +120,9 @@ public final class DynamicClass {
     }
 
     private static void addParameter(final Object object) {
+        if (object == null) {
+            return;
+        }
         OBJECT_MAP.put(object.getClass(), object);
     }
 
@@ -124,23 +139,22 @@ public final class DynamicClass {
         for (final Constructor<?> constructor : clazz.getDeclaredConstructors()) {
             final List<Object> objects = new ArrayList<>();
 
-            boolean pause = false;
+            boolean complete = false;
             for (final Class<?> parameter : constructor.getParameterTypes()) {
                 final Object object = getDeepObject(parameter);
 
                 if (object == null) {
-                    pause = true;
-                    break;
-                } else {
-                    objects.add(object);
+                    return null;
                 }
+
+                objects.add(object);
             }
 
-            if (!pause) {
+            if (!complete) {
                 try {
                     clazzInstance = constructor.newInstance(objects.toArray());
-                } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                    throw new IllegalStateException(e);
+                } catch (InstantiationException | IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
+                    throw new InvalidConstructorException(clazz);
                 }
             }
         }
@@ -156,7 +170,13 @@ public final class DynamicClass {
     }
 
     private static Object getDeepObject(final Class<?> clazz) {
-        Object object = null;
+        Object object = OBJECT_MAP.get(clazz);
+
+        // if the object is found, simply return it
+        if (object != null) {
+            return object;
+        }
+
         final Map<Class<?>, Object> OBJECT_MAP_COPY = new HashMap<>(OBJECT_MAP);
         for (final Map.Entry<Class<?>, Object> entry : OBJECT_MAP_COPY.entrySet()) {
             final Class<?> entryClass = entry.getKey();
@@ -168,10 +188,23 @@ public final class DynamicClass {
                 if (!recursionClassScan(clazz, entryObject, entryClass)) {
                     continue;
                 }
+
+                object = OBJECT_MAP.get(clazz);
+
+                // if the object is found after the recursion process, simply return it
+                if (object != null && clazz.isAssignableFrom(object.getClass())) {
+                    return object;
+                }
+                break;
             }
-            object = entry.getValue();
+
+            // if the entryClass is assignable to the given class
+            // then simply return the entryObject
+            return entry.getValue();
         }
-        return object;
+
+        // nothing has to be found, return null
+        return null;
     }
 
     private static boolean recursionClassScan(final Class<?> target, final Object object, final Class<?> clazz) {
@@ -205,23 +238,23 @@ public final class DynamicClass {
     }
 
     /**
-     * This method will return an instance of the given class, if applicable, of course.
+     * Gets the class instance. if the given class instance is not found, it will
+     * return null.
      *
-     * @param clazz the class instance you want to receive
+     * @param clazz the class instance to get the instance of
      *
-     * @return an instance of the class, or null if it doesn't exist
+     * @return the class instance if found, otherwise null
      */
     public static <T> T getInstance(final Class<T> clazz) {
         return (T) OBJECT_MAP.get(clazz);
     }
 
     /**
-     * This method can be incredibly useful to use when one of the classes that is
-     * annotated with {@link AutoRegister} has a constructor, and the
-     * constructor's parameters, for whatever reason, cannot be annotated with
-     * {@link AutoRegister}.
+     * Adds the given class instance(s) to the map. if the given class instance
+     * is already in the object map, it will be replaced. If the instance is null, it
+     * will be ignored.
      *
-     * @param objects an instances of classes that you want to manually register
+     * @param objects the class instance you want to register.
      */
     public static void addParameters(final Object... objects) {
         for (final Object object : objects) {
