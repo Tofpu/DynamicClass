@@ -12,7 +12,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 public final class DynamicClass {
+    /**
+     * The map that holds all the classes that have been registered.
+     */
     private static final Map<Class<?>, Object> OBJECT_MAP = new HashMap<>();
+
+    private DynamicClass() {
+        // no instantiation allowed here
+    }
 
     /**
      * This method will attempt to create a new instance of classes that are
