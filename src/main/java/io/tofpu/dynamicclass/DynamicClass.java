@@ -17,7 +17,7 @@ public final class DynamicClass {
     /**
      * @return the singleton instance of {@link DynamicClass}
      */
-    public DynamicClass getInstance() {
+    public static DynamicClass getInstance() {
         return INSTANCE;
     }
 
