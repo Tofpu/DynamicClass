@@ -2,6 +2,7 @@ package example.apple.registry;
 
 import example.apple.Apple;
 import example.apple.handler.AppleHandler;
+import example.apple.handler.Handler;
 import io.tofpu.dynamicclass.meta.AutoRegister;
 import org.jetbrains.annotations.NotNull;
 
@@ -11,7 +12,7 @@ import java.util.Optional;
 
 @AutoRegister
 public final class AppleRegistry {
-    private final @NotNull AppleHandler appleHandler;
+    private final @NotNull Handler appleHandler;
     private final @NotNull Map<Integer, Apple> appleMap;
 
     // DynamicClass works with a constructor as well, so long the parameters
@@ -19,7 +20,7 @@ public final class AppleRegistry {
     // added with DynamicClass#addParameters method
     //
     // DynamicClass also works with multiple constructors!
-    public AppleRegistry(final @NotNull AppleHandler appleHandler) {
+    public AppleRegistry(final @NotNull Handler appleHandler) {
         this.appleHandler = appleHandler;
         this.appleMap = new HashMap<>();
     }

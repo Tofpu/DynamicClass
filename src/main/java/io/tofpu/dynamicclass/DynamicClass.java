@@ -12,6 +12,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 public final class DynamicClass {
+    private static final DynamicClass INSTANCE = new DynamicClass();
+
+    /**
+     * @return the singleton instance of {@link DynamicClass}
+     */
+    public DynamicClass getInstance() {
+        return INSTANCE;
+    }
+
     /**
      * The map that holds all the classes that have been registered.
      */
@@ -42,7 +51,7 @@ public final class DynamicClass {
      * @see #alternativeScan(ClassLoader, String)
      * @see #scan(Collection)
      */
-    public static void scan(final String packageName) {
+    public void scan(final String packageName) {
         try {
             scan(Lists.newArrayList(ClassFinder.getClasses(packageName)));
         } catch (ClassNotFoundException | IOException e) {
@@ -61,7 +70,7 @@ public final class DynamicClass {
      * @throws IllegalStateException when one of the classes has a non-suitable
      * constructor
      */
-    public static void scan(final Collection<Class<?>> classes) {
+    public void scan(final Collection<Class<?>> classes) {
         try {
             final List<Class<?>> decoupledClasses = new ArrayList<>();
             for (final Class<?> clazz : classes) {
@@ -76,6 +85,7 @@ public final class DynamicClass {
                         decoupledClasses.add(clazz);
                         continue;
                     }
+
                     addParameter(object);
                 } catch (final IllegalStateException | InvalidConstructorException ex) {
                     // there's a possibility that there's a decoupled class involved here
@@ -107,7 +117,7 @@ public final class DynamicClass {
      * @see #scan(String)
      * @see #scan(Collection)
      */
-    public static void alternativeScan(final ClassLoader classLoader, final String packageName) throws IOException {
+    public void alternativeScan(final ClassLoader classLoader, final String packageName) throws IOException {
         final List<Class<?>> classes = new ArrayList<>();
         for (final ClassPath.ClassInfo clazz : ClassPath.from(classLoader)
                 .getTopLevelClasses()) {
@@ -141,7 +151,7 @@ public final class DynamicClass {
      * @throws InvalidConstructorException when given class has a
      * non-suitable constructor
      */
-    private static Object newInstance(final Class<?> clazz) throws InvalidConstructorException {
+    private Object newInstance(final Class<?> clazz) throws InvalidConstructorException {
         Object clazzInstance = null;
         for (final Constructor<?> constructor : clazz.getDeclaredConstructors()) {
             final List<Object> objects = new ArrayList<>();
@@ -176,7 +186,7 @@ public final class DynamicClass {
         return clazzInstance;
     }
 
-    private static Object getDeepObject(final Class<?> clazz) {
+    private Object getDeepObject(final Class<?> clazz) {
         Object object = OBJECT_MAP.get(clazz);
 
         // if the object is found, simply return it
@@ -190,7 +200,7 @@ public final class DynamicClass {
             final Object entryObject = entry.getValue();
 
             // if the entryClass is not assignable to the given class
-            if (!entryClass.isAssignableFrom(clazz)) {
+            if (!clazz.isAssignableFrom(entryClass)) {
                 // then attempt to recurse through the class
                 if (!recursionClassScan(clazz, entryObject, entryClass)) {
                     continue;
@@ -207,14 +217,18 @@ public final class DynamicClass {
 
             // if the entryClass is assignable to the given class
             // then simply return the entryObject
-            return entry.getValue();
+            final Object value = entry.getValue();
+            if (value == null) {
+                return OBJECT_MAP.get(entryClass);
+            }
+            return value;
         }
 
         // nothing has to be found, return null
         return null;
     }
 
-    private static boolean recursionClassScan(final Class<?> target, final Object object, final Class<?> clazz) {
+    private boolean recursionClassScan(final Class<?> target, final Object object, final Class<?> clazz) {
         // reassign the entrySuperClass's superclass to entrySuperClass variable
         final Class<?> superClass = clazz.getSuperclass();
         Class<?> interfaceClass = null;
@@ -226,6 +240,7 @@ public final class DynamicClass {
                 if (!target.isAssignableFrom(interfaceClazz)) {
                     continue;
                 }
+
                 interfaceClass = interfaceClazz;
                 OBJECT_MAP.put(interfaceClass, object);
             }
@@ -252,7 +267,7 @@ public final class DynamicClass {
      *
      * @return the class instance if found, otherwise null
      */
-    public static <T> T getInstance(final Class<T> clazz) {
+    public <T> T getInstance(final Class<T> clazz) {
         return (T) OBJECT_MAP.get(clazz);
     }
 
@@ -263,7 +278,7 @@ public final class DynamicClass {
      *
      * @param objects the class instance you want to register.
      */
-    public static void addParameters(final Object... objects) {
+    public void addParameters(final Object... objects) {
         for (final Object object : objects) {
             addParameter(object);
         }
