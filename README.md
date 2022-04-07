@@ -1,3 +1,4 @@
+[![](https://jitpack.io/v/Tofpu/DynamicClass.svg)](https://jitpack.io/#Tofpu/DynamicClass)
 <div align="center">
   <h1>DynamicClass</h1>
   <p>DynamicClass is a simple, lightweight & easy to use utility which helps you remove bloat from your code by handling the class initializing when you need it.</p>
@@ -24,7 +25,7 @@ and in your application, run DynamicClass#scan method. that's it!
         <dependency>
             <groupId>com.github.Tofpu</groupId>
             <artifactId>DynamicClass</artifactId>
-            <version>2ea7dee04c</version> <!-- or use main-SNAPSHOT if possible -->
+            <version>[VERSION]</version>
         </dependency>
 ```
 
