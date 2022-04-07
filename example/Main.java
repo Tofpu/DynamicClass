@@ -13,19 +13,18 @@ public final class Main {
     private static final String PACKAGE_NAME = "example.apple";
 
     public static void main(String[] args) {
-        // scans through the given package. classes
-        // that are annotated with @AutoRegister
-        // shall be invoked
-        DynamicClass.addParameters(new Main(), new ParentHandler());
+        // Adds the Main & ParentHandler classes to the DyanmicClass's registry
+        DynamicClass.getInstance().addParameters(new Main(), new ParentHandler());
         try {
-            DynamicClass.alternativeScan(Thread.currentThread().getContextClassLoader(),
+            DynamicClass.getInstance().alternativeScan(Thread.currentThread().getContextClassLoader(),
                     PACKAGE_NAME);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         // retrieves an instance of our AppleRegistry from DynamicClass
-        final AppleRegistry appleRegistry = DynamicClass.getInstance(AppleRegistry.class);
+        final AppleRegistry appleRegistry =
+                DynamicClass.getInstance().findBy(AppleRegistry.class);
         System.out.println(appleRegistry);
 
         // checking if the apple registry is null

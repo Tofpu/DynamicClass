@@ -263,11 +263,26 @@ public final class DynamicClass {
      * Gets the class instance. if the given class instance is not found, it will
      * return null.
      *
+     * To be removed in the future. Use {@link #findBy(Class)} instead.
+     *
      * @param clazz the class instance to get the instance of
      *
      * @return the class instance if found, otherwise null
      */
+    @Deprecated
     public <T> T getInstance(final Class<T> clazz) {
+        return (T) OBJECT_MAP.get(clazz);
+    }
+
+    /**
+     * Gets the class instance. if the given class instance is not found, it will
+     * return null.
+     *
+     * @param clazz the class instance to get the instance of
+     *
+     * @return the class instance if found, otherwise null
+     */
+    public <T> T findBy(final Class<T> clazz) {
         return (T) OBJECT_MAP.get(clazz);
     }
 
